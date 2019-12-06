@@ -14,10 +14,10 @@ mysql.init_app(app)
 with open('auth.json', 'r') as f:
 	db_config = json.load(f)
 
-app.config["MYSQL_DATABASE_HOST"] = "localhost"
-app.config["MYSQL_DATABASE_USER"] = "root"
-app.config["MYSQL_DATABASE_PASSWORD"] = "evertz123"
-app.config["MYSQL_DATABASE_DB"] = "myflaskapp"
+app.config["MYSQL_DATABASE_HOST"] = db_config["host"]
+app.config["MYSQL_DATABASE_USER"] = db_config["user"]
+app.config["MYSQL_DATABASE_PASSWORD"] = db_config["password"]
+app.config["MYSQL_DATABASE_DB"] = db_config["db"]
 
 
 
