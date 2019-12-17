@@ -1,4 +1,9 @@
 {% extends 'layout.html'%}
 {% block body %}
-	<h1>{{id}}</h1>
+	<h1>{{article[1]}}</h1>
+	<small>Written by {{article[2]}} on {{article[4]}}</small>
+	<hr>
+	<div class="">
+		{{article[3] | safe}}
+	</div>
 {% endblock %}
