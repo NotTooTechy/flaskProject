@@ -21,7 +21,7 @@ app.config["MYSQL_DATABASE_PASSWORD"] = db_config["password"]
 app.config["MYSQL_DATABASE_DB"] = db_config["db"]
 #app.config["MYSQL_CURRSORCLASS"] = 'DictCursor'
 
-@app.route("/")
+@app.route("/", methods=['GET', 'POST'])
 def index():
 	return render_template("home.html")
 
