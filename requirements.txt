@@ -5,7 +5,6 @@ cachetools==3.1.1
 chardet==2.3.0
 checkbox-support==0.22
 Click==7.0
-command-not-found==0.3
 configparser==4.0.2
 cryptography==1.2.3
 cycler==0.10.0
