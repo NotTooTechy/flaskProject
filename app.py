@@ -1,7 +1,5 @@
 import json
 from flask import Flask, render_template, flash, redirect, url_for, session, logging, request
-#from data import get_articles
-from flaskext.mysql import MySQL
 from wtforms import Form, StringField, TextAreaField, PasswordField, validators, BooleanField
 from passlib.hash import sha256_crypt
 from functools import wraps
@@ -10,18 +8,6 @@ from using_sqlite import create_user, create_an_article, get_all_articles, get_a
 
 app = Flask(__name__)
 #local_articles = get_articles()
-
-# Initilize mysql
-mysql = MySQL()
-mysql.init_app(app)
-with open('auth.json', 'r') as f:
-	db_config = json.load(f)
-
-app.config["MYSQL_DATABASE_HOST"] = db_config["host"]
-app.config["MYSQL_DATABASE_USER"] = db_config["user"]
-app.config["MYSQL_DATABASE_PASSWORD"] = db_config["password"]
-app.config["MYSQL_DATABASE_DB"] = db_config["db"]
-#app.config["MYSQL_CURRSORCLASS"] = 'DictCursor'
 
 USE_SQLite = True
 
