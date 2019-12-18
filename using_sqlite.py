@@ -1,7 +1,8 @@
+import os
 import sqlite3
 from sqlite3 import Error
 
-DB_FILE = "my.db"
+DB_FILE = os.getcwd() + "/my.db"
 
 def create_db(db_file):
     """ create a database connection to a SQLite database """
