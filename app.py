@@ -5,6 +5,8 @@ from flaskext.mysql import MySQL
 from wtforms import Form, StringField, TextAreaField, PasswordField, validators, BooleanField
 from passlib.hash import sha256_crypt
 from functools import wraps
+from using_sqlite import create_user, create_an_article, get_all_articles, get_all_users, get_user, delete_an_article, \
+						get_an_article, update_an_article
 
 app = Flask(__name__)
 #local_articles = get_articles()
@@ -21,6 +23,19 @@ app.config["MYSQL_DATABASE_PASSWORD"] = db_config["password"]
 app.config["MYSQL_DATABASE_DB"] = db_config["db"]
 #app.config["MYSQL_CURRSORCLASS"] = 'DictCursor'
 
+USE_SQLite = True
+
+# Check if the user is logged in
+def is_logged_in(f):
+	@wraps(f)
+	def wrap(*args, **kwargs):
+		if 'logged_in' in session:
+			return f(*args, **kwargs)
+		else:
+			flash('Unauthorized, Please log in', 'danger')
+			return redirect(url_for('login'))
+	return wrap
+
 @app.route("/", methods=['GET', 'POST'])
 def index():
 	return render_template("home.html")
@@ -30,16 +45,11 @@ def about():
 	return render_template("about.html")
 
 @app.route("/articles")
+@is_logged_in
 def articles():
-	# Pull article list from db
-	# create curosor
-	conn = mysql.connect()
-	cursor = conn.cursor()
-	results = cursor.execute('''SELECT * FROM articles''')
-	articles = cursor.fetchall()
+	articles = get_all_articles()
 	app.logger.info(articles)
-	conn.close()
-	if  results > 0:
+	if articles:
 		return render_template('articles.html', articles=articles)
 	else:
 		msg = '''No articles found'''
@@ -47,10 +57,7 @@ def articles():
 
 @app.route("/articles/<string:id>/")
 def an_article(id):
-	conn = mysql.connect()
-	cursor = conn.cursor()
-	results = cursor.execute('''SELECT * FROM articles WHERE id=%s'''%id)
-	article = cursor.fetchone()
+	article = get_an_article(id)
 	return render_template("archive_articles.html", article=article)
 
 class RegistrationForm(Form):
@@ -72,12 +79,7 @@ def register():
 		email = form.email.data
 		username = form.username.data
 		password = sha256_crypt.encrypt(str(form.password.data))
-		#cursor = mysql.get_db().cursor()
-		conn = mysql.connect()
-		cursor = conn.cursor()
-		cursor.execute('''INSERT INTO users(name, email, username, password) VALUES("%s", "%s", "%s", "%s")'''%(name, email, username, password))
-		conn.commit()
-		cursor.close()
+		create_user(name, email, username, password)
 		flash("You are now registered and login", "success")
 		return redirect(url_for('index'))
 	return render_template('register.html', form=form)
@@ -89,17 +91,9 @@ def login():
 		# Get Form fields
 		username = request.form['username']
 		password_candidate = request.form['password']
-
-		# Create cursor
-		conn = mysql.connect()
-		cursor = conn.cursor()
-		result = cursor.execute('''SELECT * FROM users WHERE username="%s"'''%username)
-		conn.close()
-		if result > 0:
+		data = get_user(username)
+		if data is not None:
 			# Get stored hash
-			data = cursor.fetchone()
-			app.logger.info(data[4])
-			app.logger.info(data)
 			password = data[4]
 			# Compare Passwords
 			if sha256_crypt.verify(password_candidate, password):
@@ -118,16 +112,7 @@ def login():
 			return render_template('login.html', error=error)
 	return render_template('login.html')
 
-# Check if the user is logged in
-def is_logged_in(f):
-	@wraps(f)
-	def wrap(*args, **kwargs):
-		if 'logged_in' in session:
-			return f(*args, **kwargs)
-		else:
-			flash('Unauthorized, Please log in', 'danger')
-			return redirect(url_for('login'))
-	return wrap
+
 
 # User logout
 @app.route('/logout')
@@ -143,13 +128,9 @@ def logout():
 def dashboard():
 	# Pull article list from db
 	# create curosor
-	conn = mysql.connect()
-	cursor = conn.cursor()
-	results = cursor.execute('''SELECT * FROM articles''')
-	articles = cursor.fetchall()
+	articles = get_all_articles()
 	app.logger.info(articles)
-	conn.close()
-	if  results > 0:
+	if  articles:
 		return render_template('dashboard.html', articles=articles)
 	else:
 		msg = '''No articles found'''
@@ -168,13 +149,7 @@ def add_article():
 	if request.method == "POST" and form.validate():
 		title = form.title.data
 		body = form.body.data
-
-		# create curosor
-		conn = mysql.connect()
-		cursor = conn.cursor()
-		cursor.execute('''INSERT INTO articles(title, body, author) VALUES("%s", "%s", "%s")'''%(title, body, session['username']))
-		conn.commit()
-		conn.close()
+		create_an_article(title, body, session['username'])
 
 		flash('Article Created', 'success')
 		return redirect(url_for('dashboard'))
@@ -184,13 +159,7 @@ def add_article():
 @app.route('/edit_article/<string:id>', methods=['GET', 'POST'])
 @is_logged_in
 def edit_article(id):
-	# pull the article from db
-	conn = mysql.connect()
-	cursor = conn.cursor()
-	# get the article by id
-	result = cursor.execute('''SELECT * FROM articles WHERE id=%s'''%id)
-	article = cursor.fetchone()
-
+	article = get_an_article(id)
 	# Get article form
 	form = ArticleForm(request.form)
 
@@ -201,34 +170,25 @@ def edit_article(id):
 	if request.method == "POST" and form.validate():
 		title = request.form['title']
 		body = request.form['body']
-		# create curosor
-		cursor = conn.cursor()
-		cursor.execute('''UPDATE articles SET title="%s", body="%s" WHERE id=%s'''%(title, body, id))
-		conn.commit()
-		conn.close()
-
+		update_an_article(title, body, id)
 		flash('Article Updated', 'success')
 		return redirect(url_for('dashboard'))
-	conn.close()
 	return render_template('edit_article.html', form=form)
 
 # Delete Articles
 @app.route('/delete_article/<string:id>', methods=['POST'])
 @is_logged_in
 def delete_article(id):
-	# Create curosor
-	conn = mysql.connect()
-	cursor = conn.cursor()
-	cursor.execute('''DELETE FROM articles WHERE id=%s'''%id)
-	conn.commit()
-	conn.close()
+	delete_an_article(id)
 	flash('Article deleted', 'success')
 	return redirect(url_for('dashboard'))
 
 
 if __name__ == "__main__":
 	import os
+	from using_sqlite import main as main_prepare_db
+	main_prepare_db()
 	app.secret_key = "secret_123"
 	port = int(os.environ.get('PORT', 5000))
 	#app.run(debug=True)
-	app.run(host='0.0.0.0', port=port)
+	app.run(host='0.0.0.0', port=port, debug=True)
