@@ -33,7 +33,7 @@ idna==2.0
 importlib-metadata==0.23
 itsdangerous==1.1.0
 jedi==0.15.1
-Jinja2==2.10.3
+Jinja2==2.11.3
 jsonschema==3.1.1
 kazam==1.4.5
 kiwisolver==1.1.0
